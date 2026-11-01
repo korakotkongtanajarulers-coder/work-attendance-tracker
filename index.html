@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบันทึกเวลาทำงานและค่าแรงพนักงาน</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Prompt', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="h-full flex flex-col text-slate-800 bg-slate-50 min-h-screen">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Title -->
+                <div class="flex items-center space-x-3">
+                    <div class="bg-brand-500 p-2 rounded-xl text-white shadow-lg">
+                        <i class="fa-solid fa-user-clock text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-base sm:text-lg leading-tight">ระบบบันทึกเวลา & ค่าแรง</h1>
+                        <p class="text-[11px] text-slate-400">Daily Work & Attendance Tracker</p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons Top Right -->
+                <div class="flex items-center gap-2">
+                    <button onclick="openModal('manageSitesModal')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 font-medium rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-city text-amber-400"></i>
+                        <span class="hidden sm:inline">จัดการไซต์งาน</span>
+                    </button>
+                    <button onclick="setAllHolidayToday()" class="px-3 py-1.5 bg-rose-950/80 hover:bg-rose-900 text-xs text-rose-200 font-medium rounded-lg border border-rose-800/60 transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-umbrella-beach text-rose-400"></i>
+                        <span class="hidden sm:inline">วันหยุดทั้งวัน (หยุดทั้งทีม)</span>
+                    </button>
+                    <button onclick="openModal('employeeModal')" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-xs text-white font-semibold rounded-lg shadow-sm transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span class="hidden sm:inline">เพิ่มพนักงาน</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sub-Bar / View Selector -->
+    <div class="bg-white border-b border-slate-200 sticky top-16 z-20 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                
+                <!-- View Mode Tabs -->
+                <div class="flex items-center bg-slate-100 p-1 rounded-xl w-full md:w-auto">
+                    <button id="btnDailyView" onclick="switchView('daily')" class="flex-1 md:flex-none px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm bg-white text-slate-800">
+                        <i class="fa-solid fa-calendar-day mr-1 text-brand-500"></i> รายวัน
+                    </button>
+                    <button id="btnCalendarView" onclick="switchView('calendar')" class="flex-1 md:flex-none px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900">
+                        <i class="fa-solid fa-calendar-days mr-1 text-emerald-500"></i> ปฏิทิน
+                    </button>
+                    <button id="btnMonthlyView" onclick="switchView('monthly')" class="flex-1 md:flex-none px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900">
+                        <i class="fa-solid fa-chart-pie mr-1 text-purple-500"></i> สรุปรายเดือน
+                    </button>
+                </div>
+
+                <!-- Filters & Controls -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <!-- Daily Controls -->
+                    <div id="dailyControls" class="flex items-center gap-2">
+                        <label class="text-xs font-semibold text-slate-600">วันที่:</label>
+                        <input type="date" id="selectedDate" onchange="renderDashboard()" class="bg-slate-50 border border-slate-300 rounded-lg text-xs px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-700 font-medium">
+                    </div>
+
+                    <!-- Monthly / Calendar Controls -->
+                    <div id="monthlyControls" class="flex items-center gap-2 hidden">
+                        <label class="text-xs font-semibold text-slate-600">ประจำเดือน:</label>
+                        <input type="month" id="selectedMonth" onchange="renderDashboard()" class="bg-slate-50 border border-slate-300 rounded-lg text-xs px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-700 font-medium">
+                    </div>
+
+                    <!-- Site Filter & Search -->
+                    <select id="filterSite" onchange="renderDashboard()" class="bg-slate-50 border border-slate-300 rounded-lg text-xs px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-700">
+                        <option value="ALL">ไซต์งานทั้งหมด</option>
+                    </select>
+
+                    <div class="relative flex-1 md:flex-none">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="searchEmp" oninput="renderDashboard()" placeholder="ค้นหาชื่อ..." class="w-full md:w-36 bg-slate-50 border border-slate-300 rounded-lg text-xs pl-8 pr-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Photos Section (Visible only in Daily View) -->
+    <div id="dailyPhotosSection" class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <div>
+                    <h3 class="text-xs font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-images text-brand-600"></i> รูปภาพบันทึกประจำวัน (ไซต์งาน/สลิปโอนเงิน/รูปการทำงาน)
+                    </h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5">แนบรูปภาพได้สูงสุด 15 รูปประจำวันนี้ <span id="photoCountBadge" class="font-bold text-brand-600">(0/15 รูป)</span></p>
+                </div>
+                <label id="uploadPhotoBtn" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg cursor-pointer transition flex items-center justify-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-cloud-arrow-up text-brand-400"></i> อัปโหลดรูปภาพ
+                    <input type="file" id="dailyImageInput" accept="image/*" multiple onchange="handleDailyImageUpload(event)" class="hidden">
+                </label>
+            </div>
+            <div id="dailyPhotosGallery" class="flex flex-wrap gap-3 min-h-[60px] items-center p-2 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <!-- Image thumbnails injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Header Status Banner -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm gap-4">
+            <div>
+                <h2 id="tableTitle" class="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-brand-600"></i> ตารางบันทึกเวลาทำงานประจำวัน
+                </h2>
+                <p id="tableSubTitle" class="text-xs text-slate-500 mt-0.5">แสดงรายการพนักงานและปรับสถานะการทำงานประจำวัน</p>
+            </div>
+            <div id="summaryCards" class="flex items-center gap-3">
+                <div class="bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-center">
+                    <span class="text-[10px] text-slate-500 font-medium uppercase block">พนักงานทั้งหมด</span>
+                    <span id="statTotalEmp" class="text-sm font-bold text-slate-800">0 คน</span>
+                </div>
+                <div class="bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 text-center">
+                    <span class="text-[10px] text-emerald-600 font-medium uppercase block">มาทำงานวันนี้</span>
+                    <span id="statPresentEmp" class="text-sm font-bold text-emerald-700">0 คน</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Container (Table or Calendar View) -->
+        <div id="mainViewContainer" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <!-- Table View -->
+            <div id="tableViewWrapper" class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead id="tableHeader" class="bg-slate-100/80 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                        <!-- Dynamic Header -->
+                    </thead>
+                    <tbody id="attendanceTableBody" class="divide-y divide-slate-100 text-xs">
+                        <!-- Rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Calendar View Container -->
+            <div id="calendarViewWrapper" class="p-4 sm:p-6 hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 id="calendarMonthTitle" class="text-base font-bold text-slate-800"></h3>
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> มีคนทำงาน</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span> หยุด/ไม่มีคนทำงาน</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-7 gap-1 sm:gap-2 text-center mb-2 font-bold text-xs text-slate-500">
+                    <div class="text-rose-500 py-1">อา.</div>
+                    <div class="py-1">จ.</div>
+                    <div class="py-1">อ.</div>
+                    <div class="py-1">พ.</div>
+                    <div class="py-1">พฤ.</div>
+                    <div class="py-1">ศ.</div>
+                    <div class="text-amber-600 py-1">ส.</div>
+                </div>
+                <div id="calendarGrid" class="grid grid-cols-7 gap-1 sm:gap-2">
+                    <!-- Dynamic Calendar Cells -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modals -->
+    <!-- Add/Edit Employee Modal -->
+    <div id="employeeModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all">
+            <div class="px-6 py-4 bg-slate-900 text-white flex justify-between items-center">
+                <h3 id="employeeModalTitle" class="font-bold text-sm flex items-center gap-2"><i class="fa-solid fa-user-plus text-brand-400"></i> เพิ่มข้อมูลพนักงานใหม่</h3>
+                <button onclick="closeModal('employeeModal')" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="employeeForm" onsubmit="saveEmployee(event)" class="p-6 space-y-4">
+                <input type="hidden" id="empId">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อ - นามสกุล *</label>
+                    <input type="text" id="empName" required placeholder="นายสมชาย ใจดี" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-xs font-semibold text-slate-700">ตำแหน่งงาน *</label>
+                            <button type="button" onclick="openModal('managePositionsModal')" class="text-[10px] text-brand-600 hover:underline">+ จัดการ</button>
+                        </div>
+                        <select id="empPosition" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            <!-- Options injected dynamically -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">ประเภทค่าแรง *</label>
+                        <select id="empWageType" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            <option value="DAILY">รายวัน (บาท/วัน)</option>
+                            <option value="HOURLY">รายชั่วโมง (บาท/ชม.)</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">อัตราค่าแรงปกติ (บาท) *</label>
+                    <input type="number" id="empBaseWage" required step="0.01" min="0" placeholder="500" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">วันที่เริ่มงาน</label>
+                        <input type="date" id="empStartDate" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">วันที่ลาออก (ถ้ามี)</label>
+                        <input type="date" id="empResignDate" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('employeeModal')" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow transition">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Manage Sites Modal -->
+    <div id="manageSitesModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden">
+            <div class="px-5 py-4 bg-slate-900 text-white flex justify-between items-center">
+                <h3 class="font-bold text-sm"><i class="fa-solid fa-city text-amber-400 mr-2"></i> จัดการรายการไซต์งาน</h3>
+                <button onclick="closeModal('manageSitesModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="flex gap-2">
+                    <input type="text" id="newSiteInput" placeholder="ชื่อไซต์งานใหม่..." class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    <button onclick="addSite()" class="px-3 py-1.5 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition">เพิ่ม</button>
+                </div>
+                <div id="sitesList" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Positions Modal -->
+    <div id="managePositionsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden">
+            <div class="px-5 py-4 bg-slate-900 text-white flex justify-between items-center">
+                <h3 class="font-bold text-sm"><i class="fa-solid fa-tags text-brand-500 mr-2"></i> จัดการรายการตำแหน่งงาน</h3>
+                <button onclick="closeModal('managePositionsModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="flex gap-2">
+                    <input type="text" id="newPosInput" placeholder="ชื่อตำแหน่งงานใหม่..." class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    <button onclick="addPosition()" class="px-3 py-1.5 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition">เพิ่ม</button>
+                </div>
+                <div id="positionsList" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div id="imagePreviewModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="relative max-w-3xl w-full flex flex-col items-center justify-center">
+            <img id="modalPreviewImg" src="" class="max-h-[80vh] max-w-full rounded-2xl object-contain shadow-2xl border border-slate-700">
+            <div class="mt-4 flex items-center gap-3">
+                <button id="modalDeleteBtn" onclick="" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl shadow transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-trash-can"></i> ลบรูปภาพนี้
+                </button>
+                <button onclick="closeModal('imagePreviewModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-xl transition">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+            <button onclick="closeModal('imagePreviewModal')" class="absolute -top-10 right-0 text-white hover:text-slate-300 text-2xl"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-2xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMsg">บันทึกข้อมูลเรียบร้อยแล้ว</span>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        let currentView = 'daily'; // 'daily', 'calendar', 'monthly'
+        let positions = ['ช่างไม้', 'ช่างปูน', 'ช่างอิฐ', 'ช่างเหล็ก', 'กรรมกร'];
+        let sites = ['ไซต์ A (หลัก)', 'ไซต์ B (อาพาธ)', 'ไซต์ C (โครงการ 2)'];
+        
+        let employees = [
+            { id: 'emp_1', name: 'นายสมชาย ดีมาก', position: 'ช่างไม้', wageType: 'DAILY', baseWage: 550, startDate: '2026-01-01', resignDate: '' },
+            { id: 'emp_2', name: 'นายวิชัย มาดี', position: 'ช่างปูน', wageType: 'DAILY', baseWage: 500, startDate: '2026-01-15', resignDate: '' },
+            { id: 'emp_3', name: 'นายอนันต์ ขยันยิ่ง', position: 'กรรมกร', wageType: 'DAILY', baseWage: 400, startDate: '2026-02-01', resignDate: '' },
+            { id: 'emp_4', name: 'นายบุญมี งานดี', position: 'ช่างเหล็ก', wageType: 'HOURLY', baseWage: 70, startDate: '2026-01-10', resignDate: '' }
+        ];
+
+        let attendanceStore = {};
+        let dailyPhotosStore = {}; // { 'YYYY-MM-DD': ['base64_1', 'base64_2'] }
+
+        window.onload = function() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            document.getElementById('selectedDate').value = todayStr;
+            document.getElementById('selectedMonth').value = todayStr.substring(0, 7);
+
+            loadData();
+            seedInitialAttendance();
+            populateSiteDropdowns();
+            renderDashboard();
+        };
+
+        function saveData() {
+            localStorage.setItem('payroll_positions', JSON.stringify(positions));
+            localStorage.setItem('payroll_sites', JSON.stringify(sites));
+            localStorage.setItem('payroll_employees', JSON.stringify(employees));
+            localStorage.setItem('payroll_attendance', JSON.stringify(attendanceStore));
+            localStorage.setItem('payroll_daily_photos', JSON.stringify(dailyPhotosStore));
+        }
+
+        function loadData() {
+            const p = localStorage.getItem('payroll_positions');
+            const s = localStorage.getItem('payroll_sites');
+            const e = localStorage.getItem('payroll_employees');
+            const a = localStorage.getItem('payroll_attendance');
+            const ph = localStorage.getItem('payroll_daily_photos');
+            if (p) positions = JSON.parse(p);
+            if (s) sites = JSON.parse(s);
+            if (e) employees = JSON.parse(e);
+            if (a) attendanceStore = JSON.parse(a);
+            if (ph) dailyPhotosStore = JSON.parse(ph);
+        }
+
+        function seedInitialAttendance() {
+            const todayStr = document.getElementById('selectedDate').value;
+            if (!attendanceStore[todayStr]) {
+                attendanceStore[todayStr] = {};
+                employees.forEach(emp => {
+                    attendanceStore[todayStr][emp.id] = {
+                        isPresent: true,
+                        sites: [sites[0] || ''],
+                        workType: 'FULL', // 'FULL', 'HALF', 'HOURS'
+                        customHours: 8,
+                        otHours: 0,
+                        advance: 0
+                    };
+                });
+                saveData();
+            }
+        }
+
+        function populateSiteDropdowns() {
+            const selectFilter = document.getElementById('filterSite');
+            const currentFilter = selectFilter.value;
+            selectFilter.innerHTML = '<option value="ALL">ไซต์งานทั้งหมด</option>';
+            sites.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                selectFilter.appendChild(opt);
+            });
+            selectFilter.value = currentFilter;
+
+            // Render Site List in Modal
+            const listDiv = document.getElementById('sitesList');
+            listDiv.innerHTML = sites.map((s, idx) => `
+                <div class="flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs">
+                    <span class="font-medium text-slate-700">${s}</span>
+                    <button onclick="removeSite(${idx})" class="text-rose-500 hover:text-rose-700"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            `).join('');
+
+            // Render Position Dropdown in Employee Modal
+            const posSelect = document.getElementById('empPosition');
+            posSelect.innerHTML = positions.map(p => `<option value="${p}">${p}</option>`).join('');
+
+            // Render Positions List Modal
+            const posListDiv = document.getElementById('positionsList');
+            posListDiv.innerHTML = positions.map((p, idx) => `
+                <div class="flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs">
+                    <span class="font-medium text-slate-700">${p}</span>
+                    <button onclick="removePosition(${idx})" class="text-rose-500 hover:text-rose-700"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function switchView(mode) {
+            currentView = mode;
+            const btnDaily = document.getElementById('btnDailyView');
+            const btnCalendar = document.getElementById('btnCalendarView');
+            const btnMonthly = document.getElementById('btnMonthlyView');
+            const dailyControls = document.getElementById('dailyControls');
+            const monthlyControls = document.getElementById('monthlyControls');
+            const photosSection = document.getElementById('dailyPhotosSection');
+            const tableWrapper = document.getElementById('tableViewWrapper');
+            const calendarWrapper = document.getElementById('calendarViewWrapper');
+
+            // Reset Tab Classes
+            [btnDaily, btnCalendar, btnMonthly].forEach(b => b.className = "flex-1 md:flex-none px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900");
+
+            if (mode === 'daily') {
+                btnDaily.className = "flex-1 md:flex-none px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm bg-white text-slate-800";
+                dailyControls.classList.remove('hidden');
+                monthlyControls.classList.add('hidden');
+                photosSection.classList.remove('hidden');
+                tableWrapper.classList.remove('hidden');
+                calendarWrapper.classList.add('hidden');
+                document.getElementById('tableTitle').innerHTML = `<i class="fa-solid fa-list-check text-brand-600"></i> ตารางบันทึกเวลาทำงานประจำวัน`;
+                document.getElementById('tableSubTitle').innerText = 'แสดงรายการพนักงานและปรับสถานะการทำงานประจำวัน';
+            } else if (mode === 'calendar') {
+                btnCalendar.className = "flex-1 md:flex-none px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm bg-white text-slate-800";
+                monthlyControls.classList.remove('hidden');
+                dailyControls.classList.add('hidden');
+                photosSection.classList.add('hidden');
+                tableWrapper.classList.add('hidden');
+                calendarWrapper.classList.remove('hidden');
+                document.getElementById('tableTitle').innerHTML = `<i class="fa-solid fa-calendar-days text-emerald-600"></i> มุมมองปฏิทินสรุปการทำงาน`;
+                document.getElementById('tableSubTitle').innerText = 'คลิกวันที่ในปฏิทินเพื่อดูหรือแก้ไขการลงเวลาประจำวันนั้นๆ';
+            } else {
+                btnMonthly.className = "flex-1 md:flex-none px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm bg-white text-slate-800";
+                monthlyControls.classList.remove('hidden');
+                dailyControls.classList.add('hidden');
+                photosSection.classList.add('hidden');
+                tableWrapper.classList.remove('hidden');
+                calendarWrapper.classList.add('hidden');
+                document.getElementById('tableTitle').innerHTML = `<i class="fa-solid fa-chart-pie text-purple-600"></i> ตารางสรุปค่าแรงและเบิกเงินประจำเดือน`;
+                document.getElementById('tableSubTitle').innerText = 'สรุปวันมาทำงาน, วันหยุด, OT, ยอดเงินเบิกสะสม และยอดคงเหลือจ่ายสุทธิ';
+            }
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            const search = document.getElementById('searchEmp').value.toLowerCase();
+            const selectedSite = document.getElementById('filterSite').value;
+
+            if (currentView === 'daily') {
+                renderDailyView(search, selectedSite);
+            } else if (currentView === 'calendar') {
+                renderCalendarView();
+            } else {
+                renderMonthlyView(search, selectedSite);
+            }
+        }
+
+        // Daily View Renderer
+        function renderDailyView(search, selectedSite) {
+            const selectedDate = document.getElementById('selectedDate').value;
+            if (!attendanceStore[selectedDate]) attendanceStore[selectedDate] = {};
+            const dayLogs = attendanceStore[selectedDate];
+
+            renderDailyPhotos(selectedDate);
+
+            const filteredEmployees = employees.filter(emp => {
+                const matchSearch = emp.name.toLowerCase().includes(search) || emp.position.toLowerCase().includes(search);
+                const isActive = isEmployeeActiveOnDate(emp, selectedDate);
+                const log = dayLogs[emp.id];
+                const empSites = getLogSites(log);
+                const matchSite = selectedSite === 'ALL' || empSites.includes(selectedSite);
+                return matchSearch && isActive && matchSite;
+            });
+
+            // Update Header Stats
+            document.getElementById('statTotalEmp').innerText = `${filteredEmployees.length} คน`;
+            const presentCount = filteredEmployees.filter(emp => dayLogs[emp.id] && dayLogs[emp.id].isPresent).length;
+            document.getElementById('statPresentEmp').innerText = `${presentCount} คน`;
+
+            // Build Table Header
+            const header = document.getElementById('tableHeader');
+            header.innerHTML = `
+                <tr>
+                    <th class="px-4 py-3">พนักงาน / ตำแหน่ง</th>
+                    <th class="px-4 py-3">เลือกไซต์งาน (เลือกได้หลายไซต์)</th>
+                    <th class="px-4 py-3 text-center">สถานะ</th>
+                    <th class="px-4 py-3 text-center">ประเภทการทำงาน</th>
+                    <th class="px-4 py-3 text-center">OT (ชั่วโมง)</th>
+                    <th class="px-4 py-3 text-right">เบิกเงิน (บาท)</th>
+                    <th class="px-4 py-3 text-right">รวมค่าแรงวันนี้</th>
+                    <th class="px-4 py-3 text-center">จัดการ</th>
+                </tr>
+            `;
+
+            const tbody = document.getElementById('attendanceTableBody');
+            tbody.innerHTML = '';
+
+            if (filteredEmployees.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400">ไม่พบข้อมูลพนักงาน</td></tr>`;
+                return;
+            }
+
+            filteredEmployees.forEach(emp => {
+                const log = dayLogs[emp.id] || { isPresent: false, sites: [sites[0] || ''], workType: 'FULL', customHours: 8, otHours: 0, advance: 0 };
+                const pay = calculatePay(emp, log);
+                const empSites = getLogSites(log);
+
+                let siteBadgesHtml = sites.map(s => {
+                    const isSelected = empSites.includes(s);
+                    return `
+                        <button onclick="toggleEmpSite('${emp.id}', '${s}')" class="px-2 py-1 rounded-md text-[10px] font-medium border transition ${isSelected ? 'bg-brand-600 text-white border-brand-600 shadow-sm' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'}">
+                            ${s}
+                        </button>
+                    `;
+                }).join(' ');
+
+                const tr = document.createElement('tr');
+                tr.className = `hover:bg-slate-50 transition border-b border-slate-100 ${!log.isPresent ? 'bg-slate-50/50' : ''}`;
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-medium text-slate-800">
+                        <div class="font-semibold">${emp.name}</div>
+                        <div class="text-[11px] text-slate-500">${emp.position} <span class="text-slate-400">| ฿${emp.baseWage}/${emp.wageType === 'DAILY' ? 'วัน' : 'ชม.'}</span></div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="flex flex-wrap gap-1">${siteBadgesHtml}</div>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <button onclick="toggleAttendance('${emp.id}')" class="px-3 py-1 rounded-full text-xs font-semibold border transition ${log.isPresent ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-rose-100 text-rose-800 border-rose-300'}">
+                            ${log.isPresent ? '<i class="fa-solid fa-check mr-1"></i> มาทำงาน' : '<i class="fa-solid fa-xmark mr-1"></i> ลา/หยุด'}
+                        </button>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        ${log.isPresent ? `
+                            <select onchange="updateLog('${emp.id}', 'workType', this.value)" class="bg-slate-50 border border-slate-300 rounded-lg text-xs px-2 py-1 focus:ring-1 focus:ring-brand-500">
+                                <option value="FULL" ${log.workType === 'FULL' ? 'selected' : ''}>เต็มวัน (8 ชม.)</option>
+                                <option value="HALF" ${log.workType === 'HALF' ? 'selected' : ''}>ครึ่งวัน (4 ชม.)</option>
+                                <option value="HOURS" ${log.workType === 'HOURS' ? 'selected' : ''}>ระบุชั่วโมง...</option>
+                            </select>
+                            ${log.workType === 'HOURS' ? `
+                                <input type="number" step="0.5" min="1" max="24" value="${log.customHours || 8}" onchange="updateLog('${emp.id}', 'customHours', parseFloat(this.value))" class="w-14 bg-slate-50 border border-slate-300 rounded-lg text-xs px-1.5 py-1 text-center ml-1"> ชม.
+                            ` : ''}
+                        ` : '<span class="text-slate-400 font-italic">-</span>'}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        ${log.isPresent ? `
+                            <input type="number" step="0.5" min="0" value="${log.otHours || 0}" onchange="updateLog('${emp.id}', 'otHours', parseFloat(this.value) || 0)" class="w-16 bg-slate-50 border border-slate-300 rounded-lg text-xs px-2 py-1 text-center focus:ring-1 focus:ring-brand-500 font-semibold text-amber-600">
+                        ` : '<span class="text-slate-400 font-italic">-</span>'}
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <input type="number" min="0" value="${log.advance || 0}" onchange="updateLog('${emp.id}', 'advance', parseFloat(this.value) || 0)" class="w-20 bg-slate-50 border border-slate-300 rounded-lg text-xs px-2 py-1 text-right focus:ring-1 focus:ring-brand-500 text-rose-600 font-semibold">
+                    </td>
+                    <td class="px-4 py-3 text-right font-bold ${pay > 0 ? 'text-emerald-700' : 'text-slate-400'}">
+                        ฿${pay.toLocaleString('th-TH', {minimumFractionDigits: 0, maximumFractionDigits: 2})}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <button onclick="editEmployee('${emp.id}')" class="text-slate-400 hover:text-brand-600 p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                    </td>
+                </tr>
+            `;
+            tbody.appendChild(tr);
+            });
+        }
+
+        // Calendar View Renderer
+        function renderCalendarView() {
+            const yearMonth = document.getElementById('selectedMonth').value; // 'YYYY-MM'
+            if (!yearMonth) return;
+
+            const [year, month] = yearMonth.split('-').map(Number);
+            const dateObj = new Date(year, month - 1, 1);
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const startDayOfWeek = dateObj.getDay(); // 0 = Sun, 1 = Mon...
+
+            const monthNamesTh = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+            document.getElementById('calendarMonthTitle').innerText = `${monthNamesTh[month - 1]} ${year + 543}`;
+
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            // Blank Days
+            for (let i = 0; i < startDayOfWeek; i++) {
+                const blank = document.createElement('div');
+                blank.className = 'h-20 bg-slate-50/50 rounded-xl border border-slate-100';
+                grid.appendChild(blank);
+            }
+
+            // Month Days
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayLogs = attendanceStore[dayStr] || {};
+                
+                // Count Present People
+                let presentCount = 0;
+                Object.values(dayLogs).forEach(log => {
+                    if (log.isPresent) presentCount++;
+                });
+
+                const isToday = dayStr === todayStr;
+
+                const cell = document.createElement('div');
+                cell.onclick = () => {
+                    document.getElementById('selectedDate').value = dayStr;
+                    switchView('daily');
+                };
+                cell.className = `h-20 sm:h-24 p-2 rounded-xl border transition cursor-pointer flex flex-col justify-between hover:shadow-md ${isToday ? 'border-brand-500 bg-brand-50/30 ring-2 ring-brand-400/20' : 'border-slate-200 bg-white hover:border-brand-300'}`;
+
+                cell.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold ${isToday ? 'bg-brand-600 text-white w-5 h-5 rounded-full flex items-center justify-center' : 'text-slate-700'}">${d}</span>
+                        ${dailyPhotosStore[dayStr] && dailyPhotosStore[dayStr].length > 0 ? `<i class="fa-solid fa-image text-slate-400 text-[10px]" title="มีรูปภาพ"></i>` : ''}
+                    </div>
+                    <div class="mt-1">
+                        ${presentCount > 0 ? `
+                            <span class="inline-block w-full text-center py-1 bg-emerald-100 text-emerald-800 font-bold rounded-lg text-[11px] shadow-sm">
+                                มา ${presentCount} คน
+                            </span>
+                        ` : `
+                            <span class="inline-block w-full text-center py-1 bg-rose-50 text-rose-600 font-medium rounded-lg text-[10px]">
+                                หยุด/ไม่มีคน
+                            </span>
+                        `}
+                    </div>
+                `;
+                grid.appendChild(cell);
+            }
+        }
+
+        // Monthly Summary View Renderer
+        function renderMonthlyView(search, selectedSite) {
+            const yearMonth = document.getElementById('selectedMonth').value; // 'YYYY-MM'
+            if (!yearMonth) return;
+
+            // Header Setup
+            const header = document.getElementById('tableHeader');
+            header.innerHTML = `
+                <tr>
+                    <th class="px-4 py-3">พนักงาน / ตำแหน่ง</th>
+                    <th class="px-4 py-3 text-center">มา (วัน)</th>
+                    <th class="px-4 py-3 text-center">ลา/หยุด (วัน)</th>
+                    <th class="px-4 py-3 text-center">รวม OT (ชม.)</th>
+                    <th class="px-4 py-3">สรุปไซต์งานที่ไปปฏิบัติงานในเดือนนี้</th>
+                    <th class="px-4 py-3 text-right">รวมค่าแรงประจำเดือน</th>
+                    <th class="px-4 py-3 text-right">เบิกเงินสะสม</th>
+                    <th class="px-4 py-3 text-right">ยอดคงเหลือจ่ายสุทธิ</th>
+                </tr>
+            `;
+
+            const tbody = document.getElementById('attendanceTableBody');
+            tbody.innerHTML = '';
+
+            const daysInMonth = new Date(yearMonth.split('-')[0], yearMonth.split('-')[1], 0).getDate();
+
+            const filteredEmployees = employees.filter(emp => {
+                return emp.name.toLowerCase().includes(search) || emp.position.toLowerCase().includes(search);
+            });
+
+            if (filteredEmployees.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400">ไม่พบข้อมูลพนักงาน</td></tr>`;
+                return;
+            }
+
+            filteredEmployees.forEach(emp => {
+                let totalWorkDays = 0;
+                let totalLeaveDays = 0;
+                let totalOT = 0;
+                let totalEarnings = 0;
+                let totalAdvance = 0;
+                let uniqueSites = new Set();
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dayStr = `${yearMonth}-${String(d).padStart(2, '0')}`;
+                    const log = (attendanceStore[dayStr] && attendanceStore[dayStr][emp.id]) || null;
+                    const isActive = isEmployeeActiveOnDate(emp, dayStr);
+
+                    if (isActive) {
+                        if (log && log.isPresent) {
+                            totalWorkDays++;
+                            totalOT += (log.otHours || 0);
+                            totalEarnings += calculatePay(emp, log);
+                            const empSites = getLogSites(log);
+                            empSites.forEach(s => uniqueSites.add(s));
+                        } else {
+                            totalLeaveDays++;
+                        }
+                        if (log) {
+                            totalAdvance += (log.advance || 0);
+                        }
+                    }
+                }
+
+                const netPay = totalEarnings - totalAdvance;
+                const sitesListArray = Array.from(uniqueSites);
+                const siteSummaryText = sitesListArray.length > 0 
+                    ? `<span class="font-semibold text-brand-700">รวม ${sitesListArray.length} ไซต์:</span> ${sitesListArray.join(', ')}` 
+                    : '<span class="text-slate-400 font-italic">ไม่มีข้อมูล</span>';
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition border-b border-slate-100';
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-medium text-slate-800">
+                        <div class="font-semibold">${emp.name}</div>
+                        <div class="text-[11px] text-slate-500">${emp.position}</div>
+                    </td>
+                    <td class="px-4 py-3 text-center font-bold text-emerald-700 bg-emerald-50/50">${totalWorkDays} วัน</td>
+                    <td class="px-4 py-3 text-center font-semibold text-rose-600 bg-rose-50/50">${totalLeaveDays} วัน</td>
+                    <td class="px-4 py-3 text-center font-semibold text-amber-600">${totalOT} ชม.</td>
+                    <td class="px-4 py-3 text-xs text-slate-700">${siteSummaryText}</td>
+                    <td class="px-4 py-3 text-right font-semibold text-slate-700">฿${totalEarnings.toLocaleString('th-TH')}</td>
+                    <td class="px-4 py-3 text-right font-semibold text-rose-600">฿${totalAdvance.toLocaleString('th-TH')}</td>
+                    <td class="px-4 py-3 text-right font-bold text-base ${netPay >= 0 ? 'text-emerald-700' : 'text-rose-600'}">
+                        ฿${netPay.toLocaleString('th-TH')}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Calculations & Utilities
+        function calculatePay(emp, log) {
+            if (!log.isPresent) return 0;
+            let basePay = 0;
+            const hourlyRate = emp.wageType === 'DAILY' ? (emp.baseWage / 8) : emp.baseWage;
+
+            if (emp.wageType === 'DAILY') {
+                if (log.workType === 'FULL') basePay = emp.baseWage;
+                else if (log.workType === 'HALF') basePay = emp.baseWage / 2;
+                else if (log.workType === 'HOURS') basePay = (log.customHours || 8) * hourlyRate;
+            } else {
+                const hrs = log.workType === 'FULL' ? 8 : (log.workType === 'HALF' ? 4 : (log.customHours || 8));
+                basePay = hrs * emp.baseWage;
+            }
+
+            const otPay = (log.otHours || 0) * hourlyRate; // Standard 1.0x OT rate
+            return basePay + otPay;
+        }
+
+        function getLogSites(log) {
+            if (!log) return [sites[0] || ''];
+            if (log.sites && Array.isArray(log.sites)) return log.sites;
+            if (log.site) return [log.site];
+            return [sites[0] || ''];
+        }
+
+        function isEmployeeActiveOnDate(emp, dateStr) {
+            if (emp.startDate && dateStr < emp.startDate) return false;
+            if (emp.resignDate && dateStr > emp.resignDate) return false;
+            return true;
+        }
+
+        function updateLog(empId, field, value) {
+            const selectedDate = document.getElementById('selectedDate').value;
+            if (!attendanceStore[selectedDate]) attendanceStore[selectedDate] = {};
+            if (!attendanceStore[selectedDate][empId]) {
+                attendanceStore[selectedDate][empId] = { isPresent: true, sites: [sites[0] || ''], workType: 'FULL', customHours: 8, otHours: 0, advance: 0 };
+            }
+            attendanceStore[selectedDate][empId][field] = value;
+            saveData();
+            renderDashboard();
+        }
+
+        function toggleAttendance(empId) {
+            const selectedDate = document.getElementById('selectedDate').value;
+            if (!attendanceStore[selectedDate]) attendanceStore[selectedDate] = {};
+            if (!attendanceStore[selectedDate][empId]) {
+                attendanceStore[selectedDate][empId] = { isPresent: true, sites: [sites[0] || ''], workType: 'FULL', customHours: 8, otHours: 0, advance: 0 };
+            }
+            attendanceStore[selectedDate][empId].isPresent = !attendanceStore[selectedDate][empId].isPresent;
+            saveData();
+            renderDashboard();
+        }
+
+        function toggleEmpSite(empId, siteName) {
+            const selectedDate = document.getElementById('selectedDate').value;
+            if (!attendanceStore[selectedDate]) attendanceStore[selectedDate] = {};
+            let log = attendanceStore[selectedDate][empId];
+            if (!log) {
+                log = { isPresent: true, sites: [sites[0] || ''], workType: 'FULL', customHours: 8, otHours: 0, advance: 0 };
+                attendanceStore[selectedDate][empId] = log;
+            }
+            let currentSites = getLogSites(log);
+            if (currentSites.includes(siteName)) {
+                if (currentSites.length > 1) {
+                    currentSites = currentSites.filter(s => s !== siteName);
+                }
+            } else {
+                currentSites.push(siteName);
+            }
+            log.sites = currentSites;
+            saveData();
+            renderDashboard();
+        }
+
+        function setAllHolidayToday() {
+            const selectedDate = document.getElementById('selectedDate').value;
+            if (!attendanceStore[selectedDate]) attendanceStore[selectedDate] = {};
+            employees.forEach(emp => {
+                if (isEmployeeActiveOnDate(emp, selectedDate)) {
+                    if (!attendanceStore[selectedDate][emp.id]) {
+                        attendanceStore[selectedDate][emp.id] = { isPresent: false, sites: [sites[0] || ''], workType: 'FULL', customHours: 8, otHours: 0, advance: 0 };
+                    } else {
+                        attendanceStore[selectedDate][emp.id].isPresent = false;
+                    }
+                }
+            });
+            saveData();
+            renderDashboard();
+            showToast('ปรับเป็นวันหยุดทั้งทีมสำหรับวันนี้เรียบร้อยแล้ว');
+        }
+
+        // Photo Gallery Logic
+        function handleDailyImageUpload(event) {
+            const selectedDate = document.getElementById('selectedDate').value;
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            if (!dailyPhotosStore[selectedDate]) dailyPhotosStore[selectedDate] = [];
+
+            const currentCount = dailyPhotosStore[selectedDate].length;
+            const maxPhotos = 15;
+
+            if (currentCount >= maxPhotos) {
+                alert(`อัปโหลดรูปภาพครบโควต้าสูงสุด ${maxPhotos} รูปสำหรับวันนี้แล้ว`);
+                event.target.value = '';
+                return;
+            }
+
+            const availableSlots = maxPhotos - currentCount;
+            const filesToUpload = Array.from(files).slice(0, availableSlots);
+
+            if (files.length > availableSlots) {
+                alert(`สามารถเพิ่มได้อีกเพียง ${availableSlots} รูปเท่านั้น (สูงสุด ${maxPhotos} รูปต่อวัน)`);
+            }
+
+            let loadedCount = 0;
+            filesToUpload.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    dailyPhotosStore[selectedDate].push(e.target.result);
+                    loadedCount++;
+                    if (loadedCount === filesToUpload.length) {
+                        saveData();
+                        renderDailyPhotos(selectedDate);
+                        showToast(`อัปโหลดรูปภาพสำเร็จ (${dailyPhotosStore[selectedDate].length}/15 รูป)`);
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+            event.target.value = '';
+        }
+
+        function renderDailyPhotos(selectedDate) {
+            const gallery = document.getElementById('dailyPhotosGallery');
+            const countBadge = document.getElementById('photoCountBadge');
+            const uploadBtn = document.getElementById('uploadPhotoBtn');
+            if (!gallery) return;
+            
+            const photos = dailyPhotosStore[selectedDate] || [];
+            const maxPhotos = 15;
+
+            if (countBadge) countBadge.innerText = `(${photos.length}/${maxPhotos} รูป)`;
+
+            // Enable/Disable upload button based on photo limit
+            if (uploadBtn) {
+                if (photos.length >= maxPhotos) {
+                    uploadBtn.classList.add('opacity-50', 'pointer-events-none');
+                } else {
+                    uploadBtn.classList.remove('opacity-50', 'pointer-events-none');
+                }
+            }
+
+            if (photos.length === 0) {
+                gallery.innerHTML = `<p class="text-xs text-slate-400 italic w-full text-center py-2">ยังไม่มีรูปภาพสำหรับวันนี้ (สามารถอัปโหลดได้สูงสุด 15 รูป)</p>`;
+                return;
+            }
+
+            gallery.innerHTML = photos.map((imgData, idx) => `
+                <div class="relative group w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+                    <img src="${imgData}" onclick="openImageModal('${selectedDate}', ${idx})" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition duration-200">
+                    <button type="button" onclick="event.stopPropagation(); removeDailyPhoto('${selectedDate}', ${idx});" title="ลบรูปภาพ" class="absolute top-1 right-1 bg-rose-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-[11px] opacity-90 sm:opacity-0 group-hover:opacity-100 transition shadow-md hover:bg-rose-700">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                    <span class="absolute bottom-1 left-1 bg-slate-900/70 text-white text-[9px] px-1.5 py-0.5 rounded font-mono">${idx + 1}</span>
+                </div>
+            `).join('');
+        }
+
+        function removeDailyPhoto(dateStr, idx) {
+            if (!dailyPhotosStore[dateStr] || dailyPhotosStore[dateStr][idx] === undefined) return;
+            
+            // ลบรูปภาพออกจาก Array ทันทีโดยไม่ต้องขึ้นกล่อง Confirm (ป้องกันปัญหา Browser บล็อก)
+            dailyPhotosStore[dateStr].splice(idx, 1);
+            
+            // เซฟข้อมูลลง LocalStorage
+            saveData();
+            
+            // สั่งอัปเดตการแสดงผลแกลเลอรีรูปภาพและปฏิทินทันที
+            renderDailyPhotos(dateStr);
+            if (currentView === 'calendar') {
+                renderCalendarView();
+            }
+            showToast('ลบรูปภาพเรียบร้อยแล้ว');
+        }
+
+        function openImageModal(dateStr, idx) {
+            const photos = dailyPhotosStore[dateStr] || [];
+            if (!photos[idx]) return;
+
+            document.getElementById('modalPreviewImg').src = photos[idx];
+            
+            const deleteBtn = document.getElementById('modalDeleteBtn');
+            deleteBtn.onclick = function() {
+                closeModal('imagePreviewModal');
+                removeDailyPhoto(dateStr, idx);
+            };
+
+            openModal('imagePreviewModal');
+        }
+
+        // Employee CRUD
+        function saveEmployee(event) {
+            event.preventDefault();
+            const id = document.getElementById('empId').value;
+            const name = document.getElementById('empName').value.trim();
+            const position = document.getElementById('empPosition').value;
+            const wageType = document.getElementById('empWageType').value;
+            const baseWage = parseFloat(document.getElementById('empBaseWage').value) || 0;
+            const startDate = document.getElementById('empStartDate').value;
+            const resignDate = document.getElementById('empResignDate').value;
+
+            if (id) {
+                const idx = employees.findIndex(e => e.id === id);
+                if (idx !== -1) {
+                    employees[idx] = { id, name, position, wageType, baseWage, startDate, resignDate };
+                }
+            } else {
+                const newEmp = {
+                    id: 'emp_' + Date.now(),
+                    name, position, wageType, baseWage, startDate, resignDate
+                };
+                employees.push(newEmp);
+            }
+
+            saveData();
+            closeModal('employeeModal');
+            renderDashboard();
+            showToast(id ? 'อัปเดตข้อมูลเรียบร้อย' : 'เพิ่มพนักงานใหม่เรียบร้อย');
+        }
+
+        function editEmployee(empId) {
+            const emp = employees.find(e => e.id === empId);
+            if (!emp) return;
+
+            document.getElementById('empId').value = emp.id;
+            document.getElementById('empName').value = emp.name;
+            document.getElementById('empPosition').value = emp.position;
+            document.getElementById('empWageType').value = emp.wageType;
+            document.getElementById('empBaseWage').value = emp.baseWage;
+            document.getElementById('empStartDate').value = emp.startDate || '';
+            document.getElementById('empResignDate').value = emp.resignDate || '';
+
+            document.getElementById('employeeModalTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-brand-400"></i> แก้ไขข้อมูลพนักงาน`;
+            openModal('employeeModal');
+        }
+
+        // Sites & Positions Management
+        function addSite() {
+            const input = document.getElementById('newSiteInput');
+            const val = input.value.trim();
+            if (val && !sites.includes(val)) {
+                sites.push(val);
+                input.value = '';
+                saveData();
+                populateSiteDropdowns();
+                renderDashboard();
+                showToast('เพิ่มไซต์งานใหม่เรียบร้อย');
+            }
+        }
+
+        function removeSite(idx) {
+            if (sites.length <= 1) return alert('ต้องมีอย่างน้อย 1 ไซต์งานในระบบ');
+            sites.splice(idx, 1);
+            saveData();
+            populateSiteDropdowns();
+            renderDashboard();
+        }
+
+        function addPosition() {
+            const input = document.getElementById('newPosInput');
+            const val = input.value.trim();
+            if (val && !positions.includes(val)) {
+                positions.push(val);
+                input.value = '';
+                saveData();
+                populateSiteDropdowns();
+                showToast('เพิ่มตำแหน่งงานเรียบร้อย');
+            }
+        }
+
+        function removePosition(idx) {
+            if (positions.length <= 1) return alert('ต้องมีอย่างน้อย 1 ตำแหน่งงานในระบบ');
+            positions.splice(idx, 1);
+            saveData();
+            populateSiteDropdowns();
+        }
+
+        // UI Helpers
+        function openModal(id) {
+            if (id === 'employeeModal' && !document.getElementById('empId').value) {
+                document.getElementById('employeeForm').reset();
+                document.getElementById('empId').value = '';
+                document.getElementById('employeeModalTitle').innerHTML = `<i class="fa-solid fa-user-plus text-brand-400"></i> เพิ่มข้อมูลพนักงานใหม่`;
+            }
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
